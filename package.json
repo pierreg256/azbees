@@ -1,0 +1,18 @@
+{
+  "name": "azbees",
+  "version": "1.0.0",
+  "description": "",
+  "main": "azbees.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pierre Gilot",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.1.2",
+    "azure-arm-resource": "^1.5.1-preview",
+    "colors-tmpl": "^1.0.0",
+    "commander": "^2.9.0",
+    "ms-rest-azure": "^1.15.2"
+  }
+}
