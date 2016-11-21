@@ -1,6 +1,6 @@
 azbees.config
 azbees.config*
-
+*.zip
 
 # Logs
 logs

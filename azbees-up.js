@@ -15,19 +15,24 @@ var program = require('commander')
   , path = require('path')
   , msRestAzure = require('ms-rest-azure')
   , ResourceManagementClient = require('azure-arm-resource').ResourceManagementClient
+  , AzureStorage = require('azure-storage')
   ;
 
 var maxInstances = 5
-  , location = 'eastus'
+  , location = 'westeurope'
   , resourceGroupName = 'azbees_rg'
   , deploymentName = 'azbees_deployment'
   , resourceClient
+  , containerName = 'resources'
+  , blobExecutableName = 'loaderarchive.zip'
+  , blobStartupsrciptName = 'startupscript.ps1'
   ;
 
 
 program
   .description('Spin Up injectors in the Azure Cloud')
   .option('-i, --instances <number-of-instances>', 'number of machines to up: if not specified, the default is one instance', 1)
+  .option('-x, --executable <executable-file-path>', 'executable that will be used to run the load test')
   .option('-f, --filename <complete-file-name-and-path>', 'config file, by default : "azbees.config"', 'azbees.config')  
   .parse(process.argv);
 
@@ -39,6 +44,12 @@ _checkConfig(function(config){
 
 
 function _checkParams(){
+	if (!program.executable) {
+		inputError('Executable path is mandatory')
+	}
+	if (!fs.existsSync(program.executable)) {
+		inputError('Unable to locate executable file: '+program.executable)
+	}
 	if (isNaN(program.instances)){
 		inputError('Instnces must be an integer value');
 	} else {
@@ -92,7 +103,17 @@ function _createSwarm(config) {
 			},
 			function (callback) {
 				//Task 1
-				_loadTemplateAndDeploy(function (err, result, request, response) {
+				_createStorageGroupAndContainer(config, function (err, result, request, response) {
+					if (err) {
+						return callback(err);
+					}
+					callback(null, result);
+				});
+			},
+			function (callback) {
+				//Task 1
+				//console.log(config);
+				_loadTemplateAndDeploy(config, function (err, result, request, response) {
 					if (err) {
 						return callback(err);
 					}
@@ -116,7 +137,7 @@ function _createResourceGroup(callback) {
   return resourceClient.resourceGroups.createOrUpdate(resourceGroupName, groupParameters, callback);
 }
 
-function _loadTemplateAndDeploy(callback) {
+function _loadTemplateAndDeploy(config, callback) {
 	try {
 		var templateFilePath = path.join(__dirname, "templates/template.json");
 		var template = JSON.parse(fs.readFileSync(templateFilePath, 'utf8'));
@@ -128,8 +149,12 @@ function _loadTemplateAndDeploy(callback) {
 		adminUsername : { value : "azbeesadministrator"},
 		adminPassword : { value : "Str0ngP4$$w0rd."},
 		numberOfInstances : { value : parseInt(program.instances)},
-		OS : { value : "Windows"}
+		OS : { value : "Windows"},
+		fileList : {value : config.fileURIs.join(' ')},
+		timestamp : {value: new Date().getTime()}
 	}
+
+	//console.log(parameters);
 
 	var deploymentParameters = {
 		"properties": {
@@ -139,7 +164,7 @@ function _loadTemplateAndDeploy(callback) {
 		}
 	};
 
-	console.log(util.format('Spinning %f bees in the swarm... please be patient...', parseInt(program.instances)));
+	console.log(util.format('Spinning '+parseInt(program.instances)+' bees in the swarm... please be patient...'));
 	//console.log(util.format('\nDeploying template %s : \n%s', deploymentName, util.inspect(template, { depth: null })));
 	return resourceClient.deployments.createOrUpdate(resourceGroupName, 
                                                              deploymentName, 
@@ -147,3 +172,96 @@ function _loadTemplateAndDeploy(callback) {
                                                              callback);
 
 }
+
+function _createStorageGroupAndContainer(config, callback) {
+	try {
+		var templateFilePath = path.join(__dirname, "templates/Storage_template.json");
+		var template = JSON.parse(fs.readFileSync(templateFilePath, 'utf8'));
+	} catch (ex) {
+		return callback(ex);
+	}
+
+	var parameters = {};
+
+	var deploymentParameters = {
+		"properties": {
+			"parameters": parameters,
+			"template": template,
+			"mode": "Incremental"
+		}
+	};
+
+	console.log(util.format('Creating resources storage group... please be patient...'));
+	return resourceClient.deployments.createOrUpdate(resourceGroupName, 
+                                                             deploymentName+'Storage', 
+                                                             deploymentParameters, 
+                                                             function(err, data){
+        if (err) {
+        	callback(err)
+        } else {
+	        //console.log(util.inspect(data.properties.outputs, {depth:null}));
+	        config.storageAccount = {
+	        	name:data.properties.outputs.storageAccountName.value,
+	        	key:data.properties.outputs.storageAccountKey.value
+	        }
+	        var blobService = AzureStorage.createBlobService(data.properties.outputs.storageAccount.value);
+			blobService.createContainerIfNotExists(containerName, {
+				publicAccessLevel: 'blob'
+			}, function(error, result, response) {
+				if (!error) {
+					// if result = true, container was created.
+					// if result = false, container already existed.
+					// upload executable as blob
+					console.log('Uploading executable file...');
+					blobService.createBlockBlobFromLocalFile(containerName, blobExecutableName, program.executable, function (error) {
+						if (error != null) {
+							callback(error);
+						} else {
+
+						    //var sharedAccessPolicy = {
+						    //    AccessPolicy: {
+						    //        Expiry: AzureStorage.date.minutesFromNow(3600*24)
+						    //    }
+						    //};   
+						    
+							//var sasToken = blobService.generateSharedAccessSignature(containerName, blobExecutableName, sharedAccessPolicy);
+							var archiveUrl = blobService.getUrl(containerName, blobExecutableName);
+						    //var blobUrl = blobService.getBlobUrl(containerName, blobExecutableName, sharedAccessPolicy);
+						    console.log("access the blob at ", archiveUrl);
+						    config.fileURIs = [
+						    	archiveUrl,
+						    ]
+
+						    console.log('Uploading startup script...')
+							blobService.createBlockBlobFromLocalFile(containerName, blobStartupsrciptName, 'scripts/'+blobStartupsrciptName, function (error) {
+								if (error != null) {
+									callback(error);
+								} else {
+
+								    //var sharedAccessPolicy = {
+								    //    AccessPolicy: {
+								    //        Expiry: AzureStorage.date.minutesFromNow(3600*24)
+								    //    }
+								    //};   
+								    
+									//var sasToken = blobService.generateSharedAccessSignature(containerName, blobExecutableName, sharedAccessPolicy);
+									var scriptUrl = blobService.getUrl(containerName, blobStartupsrciptName);
+								    //var blobUrl = blobService.getBlobUrl(containerName, blobExecutableName, sharedAccessPolicy);
+								    console.log("access the blob at ", scriptUrl);
+								    config.fileURIs.push(scriptUrl);
+									callback(null, response);
+								}
+							});
+//
+						}
+					});
+
+				} else {
+					callback(error);
+				}
+			});
+        }
+    });
+
+}
+

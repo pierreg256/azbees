@@ -23,6 +23,25 @@
         "description": "Number of VMs to deploy, limit 5 since this sample is using a single storage account"
       }
     },
+    "fileList" : {
+      "type":"string",
+      "metadata":{
+        "description": "list of files to upload to the bees before running the load test"
+      }
+    }, 
+    "commandToExecute" : {
+      "type":"string",
+      "defaultValue": "powershell.exe -ExecutionPolicy Unrestricted -File startupscript.ps1",
+      "metadata":{
+        "description": "script that will be executed"
+      }
+    }, 
+    "timestamp" : {
+      "type":"int",
+      "metadata":{
+        "description": "timestamp necessary to execute extensions each time we run the ARM template"
+      }
+    }, 
     "OS": {
       "type": "string",
       "defaultValue": "Ubuntu",
@@ -37,12 +56,13 @@
   },
   "variables": {
     "storageAccountName": "[uniquestring(resourceGroup().id)]",
-    "virtualNetworkName": "myVNET",
+    "virtualNetworkName": "beesVNET",
     "addressPrefix": "10.0.0.0/16",
     "subnet1Name": "Subnet-1",
     "subnet1Prefix": "10.0.0.0/24",
     "subnet1Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets',variables('virtualNetworkName'),variables('subnet1Name'))]",
-    "availabilitySetName": "myAvSet",
+    "availabilitySetName": "beesAvSet",
+    "publicIPName": "beesPublicIP",
     "Ubuntu": {
       "publisher": "Canonical",
       "offer": "UbuntuServer",
@@ -106,7 +126,8 @@
         "count": "[parameters('numberOfInstances')]"
       },
       "dependsOn": [
-        "[variables('virtualNetworkName')]"
+        "[variables('virtualNetworkName')]",
+        "pipLoop"
       ],
       "properties": {
         "ipConfigurations": [
@@ -114,12 +135,28 @@
             "name": "ipconfig1",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat(variables('publicIPName'), copyindex()))]"
+              },
               "subnet": {
                 "id": "[variables('subnet1Ref')]"
               }
             }
           }
         ]
+      }
+    },
+    {
+      "apiVersion": "2016-09-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat(variables('publicIPName'), copyindex())]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "pipLoop",
+        "count": "[parameters('numberOfInstances')]"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
       }
     },
     {
@@ -140,7 +177,7 @@
           "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
         },
         "hardwareProfile": {
-          "vmSize": "Standard_D1_v2"
+          "vmSize": "Standard_A1"
         },
         "osProfile": {
           "computerName": "[concat('vm', copyIndex())]",
@@ -164,6 +201,30 @@
               "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('nic', copyindex()))]"
             }
           ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat('myvm', copyIndex(),'/','beesExtension')]",
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "extensionsLoop",
+        "count": "[parameters('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "virtualMachineLoop"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.7",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "timestamp": "[parameters('timestamp')]",
+          "fileUris": "[split(parameters('fileList'), ' ')]",
+          "commandToExecute": "[parameters('commandToExecute')]"
         }
       }
     }
