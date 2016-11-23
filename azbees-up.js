@@ -32,7 +32,8 @@ var maxInstances = 5
 program
   .description('Spin Up injectors in the Azure Cloud')
   .option('-i, --instances <number-of-instances>', 'number of machines to up: if not specified, the default is one instance', 1)
-  .option('-x, --executable <executable-file-path>', 'executable that will be used to run the load test')
+  .option('-a, --archive <archive-file-path>', 'archive containing required binaries to run load')
+  .option('-x, --executable <executable-file-path>', 'relative path of the executable that will be used to run the load test')
   .option('-f, --filename <complete-file-name-and-path>', 'config file, by default : "azbees.config"', 'azbees.config')  
   .parse(process.argv);
 
@@ -44,11 +45,14 @@ _checkConfig(function(config){
 
 
 function _checkParams(){
-	if (!program.executable) {
-		inputError('Executable path is mandatory')
+	if (!program.archive) {
+		inputError('Archive file is mandatory')
 	}
-	if (!fs.existsSync(program.executable)) {
-		inputError('Unable to locate executable file: '+program.executable)
+	if (!fs.existsSync(program.archive)) {
+		inputError('Unable to locate archive file: '+program.archive)
+	}
+	if (!program.executable) {
+		inputError('the executable relative path in the archive is manadatory');
 	}
 	if (isNaN(program.instances)){
 		inputError('Instnces must be an integer value');
@@ -151,7 +155,8 @@ function _loadTemplateAndDeploy(config, callback) {
 		numberOfInstances : { value : parseInt(program.instances)},
 		OS : { value : "Windows"},
 		fileList : {value : config.fileURIs.join(' ')},
-		timestamp : {value: new Date().getTime()}
+		timestamp : {value: new Date().getTime()},
+		commandToExecute : { value : 'powershell.exe -ExecutionPolicy Unrestricted -File startupscript.ps1 --executablePath C:\\bees\\'+program.executable }
 	}
 
 	//console.log(parameters);
@@ -213,7 +218,7 @@ function _createStorageGroupAndContainer(config, callback) {
 					// if result = false, container already existed.
 					// upload executable as blob
 					console.log('Uploading executable file...');
-					blobService.createBlockBlobFromLocalFile(containerName, blobExecutableName, program.executable, function (error) {
+					blobService.createBlockBlobFromLocalFile(containerName, blobExecutableName, program.archive, function (error) {
 						if (error != null) {
 							callback(error);
 						} else {

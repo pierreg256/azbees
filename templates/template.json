@@ -31,7 +31,6 @@
     }, 
     "commandToExecute" : {
       "type":"string",
-      "defaultValue": "powershell.exe -ExecutionPolicy Unrestricted -File startupscript.ps1",
       "metadata":{
         "description": "script that will be executed"
       }
