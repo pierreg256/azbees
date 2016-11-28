@@ -1,7 +1,10 @@
 ﻿Param(
   [Parameter(Mandatory=$True)]
   [string]$executablePath,
-  [string]$filePath
+  [Parameter(Mandatory=$True)]
+  [int]$nbBees,
+  [Parameter(Mandatory=$True)]
+  [int]$beeIndex
 )
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -21,7 +24,10 @@ Write-Host unzipping archive
 [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
 
 Write-Host starting bee executable
-Start-Process -FilePath $executablePath -RedirectStandardError "$($outpath)\errors.txt" -RedirectStandardOutput  "$($outpath)\output.txt" -NoNewWindow 
+$containerPath = Split-Path -Path $executablePath
+Set-Location $containerPath
+ 
+Start-Process -FilePath $executablePath -ArgumentList '-SimulatedDevicesNumber','100','-NumberParallelInstances',$nbBees,'-SimulationMode','true' -RedirectStandardError "$($outpath)\errors.txt" -RedirectStandardOutput  "$($outpath)\output.txt" -NoNewWindow 
 
 
 

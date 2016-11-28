@@ -223,7 +223,7 @@
         "settings": {
           "timestamp": "[parameters('timestamp')]",
           "fileUris": "[split(parameters('fileList'), ' ')]",
-          "commandToExecute": "[parameters('commandToExecute')]"
+          "commandToExecute": "[concat(parameters('commandToExecute'),' --nbBees ',[parameters('numberOfInstances')],' --beeIndex ',copyIndex())]"
         }
       }
     }
