@@ -32,6 +32,7 @@ var maxInstances = 5
 program
   .description('Spin Up injectors in the Azure Cloud')
   .option('-i, --instances <number-of-instances>', 'number of machines to up: if not specified, the default is one instance', 1)
+  .option('-s, --stresslevel <number-of-instances>', 'number of load threads: if not specified, the default is 100 threads', 100)
   .option('-a, --archive <archive-file-path>', 'archive containing required binaries to run load')
   .option('-x, --executable <executable-file-path>', 'relative path of the executable that will be used to run the load test')
   .option('-f, --filename <complete-file-name-and-path>', 'config file, by default : "azbees.config"', 'azbees.config')  

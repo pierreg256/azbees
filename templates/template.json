@@ -23,6 +23,14 @@
         "description": "Number of VMs to deploy, limit 5 since this sample is using a single storage account"
       }
     },
+    "stressLevel": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 5000,
+      "metadata": {
+        "description": "Number of threads to load the architecture"
+      }
+    },
     "fileList" : {
       "type":"string",
       "metadata":{
@@ -205,7 +213,7 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat('myvm', copyIndex(),'/','beesExtension')]",
+      "name": "[concat('myvm', copyIndex(),'/','beesExtension', copyIndex())]",
       "apiVersion": "2016-03-30",
       "location": "[resourceGroup().location]",
       "copy": {
@@ -223,7 +231,7 @@
         "settings": {
           "timestamp": "[parameters('timestamp')]",
           "fileUris": "[split(parameters('fileList'), ' ')]",
-          "commandToExecute": "[concat(parameters('commandToExecute'),' --nbBees ',[parameters('numberOfInstances')],' --beeIndex ',copyIndex())]"
+          "commandToExecute": "[concat(parameters('commandToExecute'),' --stressLevel ',parameters('stressLevel'),' --nbBees ',parameters('numberOfInstances'),' --beeIndex ',copyIndex())]"
         }
       }
     }
