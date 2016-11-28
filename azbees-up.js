@@ -157,6 +157,7 @@ function _loadTemplateAndDeploy(config, callback) {
 		OS : { value : "Windows"},
 		fileList : {value : config.fileURIs.join(' ')},
 		timestamp : {value: new Date().getTime()},
+		stressLevel: {value: parseInt(program.stresslevel)},
 		commandToExecute : { value : 'powershell.exe -ExecutionPolicy Unrestricted -File startupscript.ps1 --executablePath C:\\bees\\'+program.executable }
 	}
 
