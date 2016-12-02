@@ -6,12 +6,13 @@
   [Parameter(Mandatory=$True)]
   [int]$beeIndex,
   [Parameter(Mandatory=$True)]
-  [int]$stressLevel
+  [int]$stressLevel,
   [Parameter(Mandatory=$True)]
-  [int]$waitTime
+  [int]$waitTime,
   [Parameter(Mandatory=$True)]
   [int]$breath
 )
+
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 

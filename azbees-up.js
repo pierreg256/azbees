@@ -16,6 +16,7 @@ var program = require('commander')
   , msRestAzure = require('ms-rest-azure')
   , ResourceManagementClient = require('azure-arm-resource').ResourceManagementClient
   , AzureStorage = require('azure-storage')
+  , md5file = require('md5-file')
   ;
 
 var maxInstances = 5
@@ -224,7 +225,26 @@ function _createStorageGroupAndContainer(config, callback) {
 					// if result = false, container already existed.
 					// upload executable as blob
 					console.log('Uploading executable file...');
-					blobService.createBlockBlobFromLocalFile(containerName, blobExecutableName, program.archive, function (error) {
+					_uploadFile(blobService, containerName, blobExecutableName, program.archive, function(err, data){
+						if (err) {
+							callback(err);
+						} else {
+							var archiveUrl = blobService.getUrl(containerName, blobExecutableName);
+						    console.log("access the blob at ", archiveUrl);
+							config.fileURIs = [
+						    	archiveUrl,
+						    ];
+							console.log('Uploading startup script...');
+							_uploadFile(blobService, containerName, blobStartupsrciptName, 'scripts/'+blobStartupsrciptName, function(err, data){
+								var scriptUrl = blobService.getUrl(containerName, blobStartupsrciptName);
+							    console.log("access the blob at ", scriptUrl);
+							    config.fileURIs.push(scriptUrl);
+								callback(err);
+							});
+						}
+					});
+/*
+					blobService.createBlockBlobFromLocalFile(containerName, blobStartupsrciptName, 'scripts/'+blobStartupsrciptName, function (error) {
 						if (error != null) {
 							callback(error);
 						} else {
@@ -266,7 +286,7 @@ function _createStorageGroupAndContainer(config, callback) {
 //
 						}
 					});
-
+*/
 				} else {
 					callback(error);
 				}
@@ -274,5 +294,36 @@ function _createStorageGroupAndContainer(config, callback) {
         }
     });
 
+}
+
+function _uploadFile(blobService, container, name, localFile, callback){
+	// try to find if we alreadu uploaded the same file...
+	var md5 = md5file.sync(localFile);
+	console.log('file signature for ',localFile,' is: ', md5);
+	blobService.getBlobProperties(container, name, function(fetchErr,fetchData){
+		var found = false;
+		if (fetchErr) {
+			console.log('Unable to fetch file meta-data, file will be re-upoloaded');
+		}
+		if (fetchData) {
+			//console.log(fetchData.metadata);
+			if (fetchData.metadata["md5"] == md5) {
+				console.log('Found file with the same signature, skipping upload');
+				console.log(fetchData.metadata["md5"], ' == ', md5);
+				found = true;
+			} else {
+				console.log('Found file with a different signature, the file will be re-uploaded')
+			}
+		}
+
+		if (found) {
+			callback(null);
+		} else {
+			blobService.createBlockBlobFromLocalFile(container, name, localFile, {metadata:{"md5":md5}},function (error){
+				console.log('Upload complete.')
+				callback(error);
+			});
+		}
+	});
 }
 

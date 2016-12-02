@@ -98,7 +98,8 @@
       "sku": "2016-Datacenter",
       "version": "latest"
     },
-    "imageReference": "[variables(parameters('OS'))]"
+    "imageReference": "[variables(parameters('OS'))]",
+    "command": "xxx"
   },
   "resources": [
     {
@@ -251,5 +252,11 @@
         }
       }
     }
-  ]
+  ],
+  "outputs": {
+    "executedCommand" : {
+      "type": "string",
+      "value": "[concat(parameters('commandToExecute'),' --stressLevel ',parameters('stressLevel'),' --nbBees ',parameters('numberOfInstances'),' --waitTime ',parameters('waitTime'),' --breath ',parameters('breath'),' --beeIndex 1')]"
+    }
+  }
 }
