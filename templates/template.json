@@ -31,6 +31,22 @@
         "description": "Number of threads to load the architecture"
       }
     },
+    "waitTime": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 65000,
+      "metadata": {
+        "description": "wait time between frames"
+      }
+    },
+    "breath": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 65000,
+      "metadata": {
+        "description": "breath time"
+      }
+    },
     "fileList" : {
       "type":"string",
       "metadata":{
@@ -231,7 +247,7 @@
         "settings": {
           "timestamp": "[parameters('timestamp')]",
           "fileUris": "[split(parameters('fileList'), ' ')]",
-          "commandToExecute": "[concat(parameters('commandToExecute'),' --stressLevel ',parameters('stressLevel'),' --nbBees ',parameters('numberOfInstances'),' --beeIndex ',copyIndex())]"
+          "commandToExecute": "[concat(parameters('commandToExecute'),' --stressLevel ',parameters('stressLevel'),' --nbBees ',parameters('numberOfInstances'),' --waitTime ',parameters('waitTime'),' --breath ',parameters('breath'),' --beeIndex ',copyIndex())]"
         }
       }
     }

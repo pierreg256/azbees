@@ -34,6 +34,8 @@ program
   .option('-i, --instances <number-of-instances>', 'number of machines to up: if not specified, the default is one instance', 1)
   .option('-s, --stresslevel <number-of-instances>', 'number of load threads: if not specified, the default is 100 threads', 100)
   .option('-a, --archive <archive-file-path>', 'archive containing required binaries to run load')
+  .option('-w, --waittime <time-in-mseconds>', 'wait time between frames, default value is 1000',1000)
+  .option('-b, --breath <time-in-mseconds>', 'breath time, default value is 100',100)
   .option('-x, --executable <executable-file-path>', 'relative path of the executable that will be used to run the load test')
   .option('-f, --filename <complete-file-name-and-path>', 'config file, by default : "azbees.config"', 'azbees.config')  
   .parse(process.argv);
@@ -56,7 +58,7 @@ function _checkParams(){
 		inputError('the executable relative path in the archive is manadatory');
 	}
 	if (isNaN(program.instances)){
-		inputError('Instnces must be an integer value');
+		inputError('Insatnces must be an integer value');
 	} else {
 		if ((program.instances<0)||(program.instances>maxInstances)){
 			inputError(util.format('Instances value must be between 0 and %j', maxInstances));
@@ -158,6 +160,8 @@ function _loadTemplateAndDeploy(config, callback) {
 		fileList : {value : config.fileURIs.join(' ')},
 		timestamp : {value: new Date().getTime()},
 		stressLevel: {value: parseInt(program.stresslevel)},
+		waitTime: {value:parseInt(program.waittime)},
+		breath:{value:parseInt(program.breath)},
 		commandToExecute : { value : 'powershell.exe -ExecutionPolicy Unrestricted -File startupscript.ps1 --executablePath C:\\bees\\'+program.executable }
 	}
 

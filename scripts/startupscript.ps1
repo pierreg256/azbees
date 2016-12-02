@@ -7,6 +7,10 @@
   [int]$beeIndex,
   [Parameter(Mandatory=$True)]
   [int]$stressLevel
+  [Parameter(Mandatory=$True)]
+  [int]$waitTime
+  [Parameter(Mandatory=$True)]
+  [int]$breath
 )
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -29,7 +33,7 @@ Write-Host starting bee executable
 $containerPath = Split-Path -Path $executablePath
 Set-Location $containerPath
  
-Start-Process -FilePath $executablePath -ArgumentList '-SimulatedDevicesNumber',$stressLevel, '-InstanceIndex', $beeIndex, '-NumberParallelInstances',$nbBees,'-SimulationMode','true' -RedirectStandardError "$($outpath)\errors.txt" -RedirectStandardOutput  "$($outpath)\output.txt" -NoNewWindow 
+Start-Process -FilePath $executablePath -ArgumentList '-SimulatedDevicesNumber',$stressLevel, '-InstanceIndex', $beeIndex, '-NumberParallelInstances',$nbBees, '-WaitTimeBetweenFrames', '1000', '-Breath', '100', '-SimulationMode','true' -RedirectStandardError "$($outpath)\errors.txt" -RedirectStandardOutput  "$($outpath)\output.txt" -NoNewWindow 
 
 
 
