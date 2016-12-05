@@ -13,7 +13,6 @@
   [int]$breath
 )
 
-
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $invocation = (Get-Variable MyInvocation).Value
@@ -34,7 +33,7 @@ Write-Host starting bee executable
 $containerPath = Split-Path -Path $executablePath
 Set-Location $containerPath
  
-Start-Process -FilePath $executablePath -ArgumentList '-SimulatedDevicesNumber',$stressLevel, '-InstanceIndex', $beeIndex, '-NumberParallelInstances',$nbBees, '-WaitTimeBetweenFrames', '1000', '-Breath', '100', '-SimulationMode','true' -RedirectStandardError "$($outpath)\errors.txt" -RedirectStandardOutput  "$($outpath)\output.txt" -NoNewWindow 
+Start-Process -FilePath $executablePath -ArgumentList '-SimulatedDevicesNumber',$stressLevel, '-InstanceIndex', $beeIndex, '-NumberParallelInstances',$nbBees, '-WaitTimeBetweenFrames', $waitTime, '-Breath', $breath, '-SimulationMode','true' -RedirectStandardError "$($outpath)\errors.txt" -RedirectStandardOutput  "$($outpath)\output.txt" -NoNewWindow 
 
 
 
